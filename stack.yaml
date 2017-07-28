@@ -1,0 +1,54 @@
+resolver: lts-8.17
+
+packages:
+- '.'
+- location:
+    git: git@github.com:haskell-works/hw-kafka-client.git
+    commit: a74e4f45233eed780a8bdc089f6db786c04e04f8
+  extra-dep: true
+- location:
+    git: git@github.com:haskell-works/hw-kafka-conduit.git
+    commit: 701f8cf166444019de174d7426414899a236dcfc
+  extra-dep: true
+- location:
+    git: git@github.com:haskell-works/hw-haskell-avro.git
+    commit: 8b9420f5e1a0495c2717ce5cfe97c537ef3417a1
+  extra-dep: true
+- location:
+    git: git@github.com:haskell-works/hw-kafka-avro.git
+    commit: 151c5dbfcc0901af823f6d99d23750524ef8abdf
+  extra-dep: true
+- location:
+    git: git@github.com:packetloop/datadog.git
+    commit: d7c5b246e02677596ca03bf699c490d0c4470066
+  extra-dep: true
+- location:
+    git: git@github.com:packetloop/hs-arbor-logger.git
+    commit: 5cb8c29152fd3a5c0a96ae6c02b21ee1fba9ec92
+  extra-dep: true
+- location:
+    git: git@github.com:haskell-works/hw-conduit.git
+    commit: f059af6a0b9e99941ba5c5dc7c7ab9cf0b47cd67
+  extra-dep: true
+
+# Dependency packages to be pulled from upstream that are not in the resolver
+# (e.g., acme-missiles-0.3)
+extra-deps:
+  - pure-zlib-0.6
+  - hedgehog-0.1
+
+# Override default flag values for local packages and extra-deps
+flags: {}
+
+extra-package-dbs: []
+
+# Added docker build configuration
+# but disabled docker build by default.
+# "stack --docker build" will use this configuration.
+docker:
+  enable: false
+  repo: "fpco/stack-build:latest"
+  auto-pull: true
+  env:
+    - "LD_LIBRARY_PATH=docker/rdkafka/lib"
+    - "LD_INCLUDE_PATH=docker/rdkafka/include/librdkafka"

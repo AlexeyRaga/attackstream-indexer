@@ -1,0 +1,78 @@
+version: 2.0
+jobs:
+  build:
+    working_directory: ~/attackstream-indexer
+    docker:
+      - image: fpco/stack-build:latest
+
+    environment:
+      LD_LIBRARY_PATH: /usr/local/lib
+
+    steps:
+      - checkout
+      - run: git fetch --unshallow || true
+      - run: grep '^resolver:' stack.yaml > resolver.txt
+
+      - restore_cache:
+          key: librdkafka-{{ checksum "scripts/build-librdkafka.sh" }}
+      - run:
+          name: Build librdkafka
+          command: ./scripts/build-librdkafka.sh
+      - save_cache:
+          key: librdkafka-{{ checksum "scripts/build-librdkafka.sh" }}
+          paths: ~/attackstream-indexer/.librdkafka
+
+      - restore_cache:
+          keys:
+            - dot-stack-{{ checksum "stack.yaml" }}-{{ checksum "attackstream-indexer.cabal" }}
+            - dot-stack-{{ checksum "stack.yaml" }}
+            - dot-stack-{{ checksum "resolver.txt" }}
+            - dot-stack-resolver-{{ checksum "resolver.txt" }}
+      - run: stack setup
+      - save_cache:
+          key: dot-stack-resolver-{{ checksum "resolver.txt" }}
+          paths:
+            - ~/.stack
+      - save_cache:
+          key: dot-stack-{{ checksum "stack.yaml" }}
+          paths:
+            - ~/.stack
+
+      - restore_cache:
+          key: stack-work-{{ checksum "stack.yaml" }}
+      - run: stack build --test --no-run-tests --dependencies-only
+      - save_cache:
+          key: dot-stack-{{ checksum "resolver.txt" }}
+          paths:
+            - ~/.stack
+
+      - run: stack build --test --no-run-tests
+      - save_cache:
+          key: dot-stack-{{ checksum "stack.yaml" }}-{{ checksum "attackstream-indexer.cabal" }}
+          paths:
+            - ~/.stack
+      - save_cache:
+          key: stack-work-{{ checksum "stack.yaml" }}
+          paths: ~/attackstream-indexer/.stack-work
+
+      - setup_remote_docker
+      - run:
+          name: Install Docker client
+          command: |
+            set -x
+            VER="17.03.0-ce"
+            curl -L -o /tmp/docker-$VER.tgz https://get.docker.com/builds/Linux/x86_64/docker-$VER.tgz
+            tar -xz -C /tmp -f /tmp/docker-$VER.tgz
+            mv /tmp/docker/* /usr/bin
+
+      - run:
+          name: Running unit tests
+          command: stack test
+
+      - run:
+          name: Build the container
+          command: ./scripts/container.sh build
+
+      - deploy:
+          name: Pushing container
+          command: ./scripts/container.sh push
